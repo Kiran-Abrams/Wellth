@@ -1,0 +1,653 @@
+<!-- WELLTH — Mood Tracker (emoji-based mood logging + calming sounds + motivation) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>WELLTH — Mood Tracker</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="mode.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a class="logo" href="index.html">WELLTH</a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="expense.html">Expenses</a>
+        <a href="mood.html" aria-current="page">Mood Tracker</a>
+        <a href="index.html">Home</a>
+      </nav>
+      <div class="profile_section" aria-hidden="true"><i class="fas fa-user-circle"></i></div>
+    </div>
+  </header>
+
+  <main class="container" style="padding:20px 0;">
+    <section class="hero" style="min-height:auto;padding:18px 0;">
+      <div style="display:grid; gap:18px; grid-template-columns: repeat(auto-fit,minmax(320px,1fr)); align-items:start;">
+
+        <!-- Mood entry card -->
+        <div class="card" id="mood-card" aria-labelledby="mood-title">
+          <h2 id="mood-title">How are you feeling today?</h2>
+          <p class="text-muted">Tap or click an emoji to record your mood. Add a short note if you like.</p>
+
+          <form id="mood-form" autocomplete="off" aria-describedby="mood-help">
+            <div id="mood-help" class="text-muted" style="margin-bottom:8px">Select mood (daily)</div>
+
+            <div role="radiogroup" aria-label="Mood choices" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+              <!-- emojis 0 (very sad) .. 4 (very happy) -->
+              <button type="button" class="mood-emoji" data-value="0" aria-pressed="false" title="Very sad">😔<div class="sr-only">Very sad</div></button>
+              <button type="button" class="mood-emoji" data-value="1" aria-pressed="false" title="Sad">☹️<div class="sr-only">Sad</div></button>
+              <button type="button" class="mood-emoji" data-value="2" aria-pressed="false" title="Neutral">😐<div class="sr-only">Neutral</div></button>
+              <button type="button" class="mood-emoji" data-value="3" aria-pressed="false" title="Happy">🙂<div class="sr-only">Happy</div></button>
+              <button type="button" class="mood-emoji" data-value="4" aria-pressed="false" title="Very happy">😄<div class="sr-only">Very happy</div></button>
+            </div>
+
+            <label class="text-muted" style="display:block;margin-bottom:6px">Date</label>
+            <input id="mood-date" type="date" style="margin-bottom:10px;"/>
+
+            <label class="text-muted" style="display:block;margin-bottom:6px">Note (optional)</label>
+            <input id="mood-note" type="text" placeholder="A few words..." />
+
+            <p style="margin-top:12px;">
+              <button class="btn primary" id="save-mood" type="submit" disabled>Save mood</button>
+              <button class="btn" id="clear-moods" type="button">Clear all</button>
+            </p>
+          </form>
+
+          <hr style="border:none;border-top:1px solid var(--glass-border);margin:12px 0;" />
+          <h3 style="margin:8px 0">Recent moods</h3>
+          <ul id="mood-entries" style="list-style:none;padding:0;margin:0;max-height:320px;overflow:auto;"></ul>
+        </div>
+
+        <!-- Charts + prediction -->
+        <div class="card" id="charts-card" aria-labelledby="charts-title">
+          <h2 id="charts-title">Weekly Mood & Prediction</h2>
+          <p class="text-muted">Last 7 days average mood (0 = low, 4 = high). A simple trend projection provides the next 7 days prediction.</p>
+
+          <div class="chart-wrap" style="margin-bottom:14px;">
+            <canvas id="weeklyMoodChart" aria-label="Weekly mood chart" role="img"></canvas>
+          </div>
+
+          <div class="chart-wrap">
+            <canvas id="futureMoodChart" aria-label="7 day mood prediction" role="img"></canvas>
+          </div>
+        </div>
+
+        <!-- Calming sounds & motivation -->
+        <div class="card" id="calm-card" aria-labelledby="calm-title">
+          <h2 id="calm-title">Calming sounds</h2>
+          <p class="text-muted">Play ambient loops to help calm the mind. Replace src with your own permissively licensed audio files.</p>
+
+          <div style="display:grid;gap:10px;margin-bottom:14px;">
+            <div class="small-audio">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div><strong>Ocean waves</strong><div class="text-muted" style="font-size:.85rem">Gentle ocean</div></div>
+                <button class="btn" data-audio="ocean">Play</button>
+              </div>
+              <audio id="audio-ocean" loop preload="none">
+                <!-- replace with a permissively licensed loop -->
+                <source src="sounds/ocean.mp3" type="audio/mpeg">
+                Your browser does not support the audio element.
+              </audio>
+            </div>
+
+            <div class="small-audio">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div><strong>Rain & thunder</strong><div class="text-muted" style="font-size:.85rem">Soft rain</div></div>
+                <button class="btn" data-audio="rain">Play</button>
+              </div>
+              <audio id="audio-rain" loop preload="none">
+                <source src="sounds/rain.mp3" type="audio/mpeg">
+              </audio>
+            </div>
+
+            <div class="small-audio">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div><strong>Wind / Forest</strong><div class="text-muted" style="font-size:.85rem">Breezy ambience</div></div>
+                <button class="btn" data-audio="wind">Play</button>
+              </div>
+              <audio id="audio-wind" loop preload="none">
+                <source src="sounds/wind.mp3" type="audio/mpeg">
+              </audio>
+            </div>
+          </div>
+
+          <hr style="border:none;border-top:1px solid var(--glass-border);margin:12px 0;" />
+
+          <h3 style="margin:8px 0">Daily motivation</h3>
+          <div class="empty-state" id="motivation">
+            <div id="motivation-text">Loading inspiration...</div>
+            <div style="margin-top:8px;">
+              <button class="btn" id="new-quote">New</button>
+              <button class="btn" id="share-quote">Share</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; 2025 WELLTH — <a href="mailto:hello@wellth.example">hello@wellth.example</a></p>
+    </div>
+  </footer>
+
+<script>
+/* Mood tracker: localStorage-backed, emoji entry, weekly aggregation, simple prediction */
+(() => {
+  const STORAGE_KEY = 'wellth_moods_v1';
+  const form = document.getElementById('mood-form');
+  const dateInput = document.getElementById('mood-date');
+  const noteInput = document.getElementById('mood-note');
+  const saveBtn = document.getElementById('save-mood');
+  const clearBtn = document.getElementById('clear-moods');
+  const entriesEl = document.getElementById('mood-entries');
+  const emojiButtons = Array.from(document.querySelectorAll('.mood-emoji'));
+  let selectedMood = null;
+
+  // Charts
+  const weeklyCtx = document.getElementById('weeklyMoodChart').getContext('2d');
+  const futureCtx = document.getElementById('futureMoodChart').getContext('2d');
+
+  const weeklyChart = new Chart(weeklyCtx, {
+    type: 'bar',
+    data: { labels: [], datasets: [{ label: 'Avg mood', data: [], backgroundColor: 'rgba(108,140,255,0.9)', borderRadius:6 }] },
+    options: { plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, max:4, ticks:{stepSize:1,color:'var(--muted)'}}, x:{ticks:{color:'var(--muted)'}} }, maintainAspectRatio:false }
+  });
+
+  const futureChart = new Chart(futureCtx, {
+    type: 'line',
+    data: { labels: [], datasets: [{ data: [], borderColor:'rgba(50,209,191,0.95)', backgroundColor:'rgba(50,209,191,0.12)', tension:0.28, fill:true, pointRadius:3 }] },
+    options: { plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, max:4, ticks:{stepSize:1,color:'var(--muted)'}}, x:{ticks:{color:'var(--muted)'}} }, maintainAspectRatio:false }
+  });
+
+  function todayISO(d = new Date()) { const z = new Date(d); z.setHours(0,0,0,0); return z.toISOString().slice(0,10); }
+
+  function load() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; } }
+  function save(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+
+  // set default date
+  if (dateInput) dateInput.value = todayISO();
+
+  // emoji selection
+  emojiButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedMood = Number(btn.dataset.value);
+      emojiButtons.forEach(b => b.setAttribute('aria-pressed','false'));
+      btn.setAttribute('aria-pressed','true');
+      saveBtn.disabled = false;
+    });
+  });
+
+  // add mood
+  form.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    if (selectedMood === null) return;
+    const list = load();
+    const entry = {
+      id: Date.now(),
+      date: dateInput.value || todayISO(),
+      mood: selectedMood,
+      note: (noteInput.value || '').trim()
+    };
+    list.push(entry);
+    save(list);
+    noteInput.value = '';
+    selectedMood = null;
+    emojiButtons.forEach(b => b.setAttribute('aria-pressed','false'));
+    saveBtn.disabled = true;
+    render();
+  });
+
+  // clear all
+  clearBtn.addEventListener('click', () => {
+    if (!confirm('Clear all mood entries?')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    render();
+  });
+
+  // render list
+  function renderEntries() {
+    const list = load().slice().sort((a,b) => b.id - a.id);
+    entriesEl.innerHTML = '';
+    if (list.length === 0) {
+      entriesEl.innerHTML = '<li class="empty-state">No moods recorded yet — try adding one above.</li>';
+      return;
+    }
+    list.slice(0,200).forEach(it => {
+      const li = document.createElement('li');
+      li.style.display = 'flex';
+      li.style.justifyContent = 'space-between';
+      li.style.alignItems = 'center';
+      li.style.gap = '12px';
+      li.innerHTML = `
+        <div class="meta">
+          <div class="title">${['😔','☹️','😐','🙂','😄'][it.mood]} ${it.note ? escapeHtml(it.note) : ''}</div>
+          <div class="date">${it.date}</div>
+        </div>
+        <div class="amount">
+          <div class="value">mood ${it.mood}</div>
+          <div><button class="btn remove" data-id="${it.id}">Remove</button></div>
+        </div>`;
+      entriesEl.appendChild(li);
+      li.querySelector('.remove').addEventListener('click', () => {
+        const filtered = load().filter(x => x.id !== it.id);
+        save(filtered); render();
+      });
+    });
+  }
+
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // chart data helpers
+  function lastNDates(n) {
+    const out = [];
+    const now = new Date();
+    for (let i = n-1; i >= 0; i--) {
+      const d = new Date(now); d.setDate(now.getDate() - i);
+      out.push(todayISO(d));
+    }
+    return out;
+  }
+
+  function updateCharts() {
+    const list = load();
+    const days = lastNDates(7);
+    const averages = days.map(d => {
+      const items = list.filter(x => x.date === d).map(x => x.mood);
+      if (items.length === 0) return 0;
+      return Math.round((items.reduce((a,b)=>a+b,0) / items.length) * 100) / 100;
+    });
+
+    weeklyChart.data.labels = days.map(d => d.slice(5));
+    weeklyChart.data.datasets[0].data = averages;
+    weeklyChart.update();
+
+    // simple linear trend projection for next 7 days based on averages
+    const valid = averages.filter(v=>v>0);
+    const avg = valid.length ? valid.reduce((a,b)=>a+b,0)/valid.length : 2;
+    const trend = (averages[averages.length-1] - averages[0]) / Math.max(averages.length-1,1);
+    const futureLabels = [];
+    const futureVals = [];
+    const base = new Date();
+    for (let i = 1; i <= 7; i++) {
+      const d = new Date(base); d.setDate(base.getDate() + i);
+      futureLabels.push(todayISO(d).slice(5));
+      const pred = Math.min(4, Math.max(0, avg + trend * i * 0.6));
+      futureVals.push(parseFloat(pred.toFixed(2)));
+    }
+    futureChart.data.labels = futureLabels;
+    futureChart.data.datasets[0].data = futureVals;
+    futureChart.update();
+  }
+
+  // calming audio controls
+  document.querySelectorAll('[data-audio]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.audio;
+      const audio = document.getElementById('audio-' + key);
+      if (!audio) return;
+      // pause others
+      document.querySelectorAll('audio').forEach(a => { if (a !== audio) { a.pause(); a.currentTime = 0; }});
+      if (audio.paused) { audio.play(); btn.textContent = 'Pause'; } else { audio.pause(); btn.textContent = 'Play'; }
+    });
+  });
+
+  // motivation quotes (small curated list)
+  const quotes = [
+    "One small positive thought in the morning can change your whole day.",
+    "You are stronger than you think — take one deep breath.",
+    "Progress, not perfection. Try again tomorrow.",
+    "Quiet your mind and listen to the small voice within.",
+    "Kindness toward yourself is the foundation of wellness."
+  ];
+  const motEl = document.getElementById('motivation-text');
+  function newQuote() { motEl.textContent = quotes[Math.floor(Math.random()*quotes.length)]; }
+  document.getElementById('new-quote').addEventListener('click', newQuote);
+  document.getElementById('share-quote').addEventListener('click', () => {
+    if (navigator.share) navigator.share({text: motEl.textContent}).catch(()=>{});
+    else alert(motEl.textContent);
+  });
+
+  // initial render
+  function render() {
+    renderEntries();
+    updateCharts();
+  }
+
+  render();
+  newQuote();
+})();
+</script>
+</body>
+</html>
+```// filepath: c:\Users\hp\OneDrive\ドキュメント\PROJECTS\Web development\Wellth\mood.html
+<!-- WELLTH — Mood Tracker (emoji-based mood logging + calming sounds + motivation) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>WELLTH — Mood Tracker</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="mode.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a class="logo" href="index.html">WELLTH</a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="expense.html">Expenses</a>
+        <a href="mood.html" aria-current="page">Mood Tracker</a>
+        <a href="index.html">Home</a>
+      </nav>
+      <div class="profile_section" aria-hidden="true"><i class="fas fa-user-circle"></i></div>
+    </div>
+  </header>
+
+  <main class="container" style="padding:20px 0;">
+    <section class="hero" style="min-height:auto;padding:18px 0;">
+      <div style="display:grid; gap:18px; grid-template-columns: repeat(auto-fit,minmax(320px,1fr)); align-items:start;">
+
+        <!-- Mood entry card -->
+        <div class="card" id="mood-card" aria-labelledby="mood-title">
+          <h2 id="mood-title">How are you feeling today?</h2>
+          <p class="text-muted">Tap or click an emoji to record your mood. Add a short note if you like.</p>
+
+          <form id="mood-form" autocomplete="off" aria-describedby="mood-help">
+            <div id="mood-help" class="text-muted" style="margin-bottom:8px">Select mood (daily)</div>
+
+            <div role="radiogroup" aria-label="Mood choices" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+              <!-- emojis 0 (very sad) .. 4 (very happy) -->
+              <button type="button" class="mood-emoji" data-value="0" aria-pressed="false" title="Very sad">😔<div class="sr-only">Very sad</div></button>
+              <button type="button" class="mood-emoji" data-value="1" aria-pressed="false" title="Sad">☹️<div class="sr-only">Sad</div></button>
+              <button type="button" class="mood-emoji" data-value="2" aria-pressed="false" title="Neutral">😐<div class="sr-only">Neutral</div></button>
+              <button type="button" class="mood-emoji" data-value="3" aria-pressed="false" title="Happy">🙂<div class="sr-only">Happy</div></button>
+              <button type="button" class="mood-emoji" data-value="4" aria-pressed="false" title="Very happy">😄<div class="sr-only">Very happy</div></button>
+            </div>
+
+            <label class="text-muted" style="display:block;margin-bottom:6px">Date</label>
+            <input id="mood-date" type="date" style="margin-bottom:10px;"/>
+
+            <label class="text-muted" style="display:block;margin-bottom:6px">Note (optional)</label>
+            <input id="mood-note" type="text" placeholder="A few words..." />
+
+            <p style="margin-top:12px;">
+              <button class="btn primary" id="save-mood" type="submit" disabled>Save mood</button>
+              <button class="btn" id="clear-moods" type="button">Clear all</button>
+            </p>
+          </form>
+
+          <hr style="border:none;border-top:1px solid var(--glass-border);margin:12px 0;" />
+          <h3 style="margin:8px 0">Recent moods</h3>
+          <ul id="mood-entries" style="list-style:none;padding:0;margin:0;max-height:320px;overflow:auto;"></ul>
+        </div>
+
+        <!-- Charts + prediction -->
+        <div class="card" id="charts-card" aria-labelledby="charts-title">
+          <h2 id="charts-title">Weekly Mood & Prediction</h2>
+          <p class="text-muted">Last 7 days average mood (0 = low, 4 = high). A simple trend projection provides the next 7 days prediction.</p>
+
+          <div class="chart-wrap" style="margin-bottom:14px;">
+            <canvas id="weeklyMoodChart" aria-label="Weekly mood chart" role="img"></canvas>
+          </div>
+
+          <div class="chart-wrap">
+            <canvas id="futureMoodChart" aria-label="7 day mood prediction" role="img"></canvas>
+          </div>
+        </div>
+
+        <!-- Calming sounds & motivation -->
+        <div class="card" id="calm-card" aria-labelledby="calm-title">
+          <h2 id="calm-title">Calming sounds</h2>
+          <p class="text-muted">Play ambient loops to help calm the mind. Replace src with your own permissively licensed audio files.</p>
+
+          <div style="display:grid;gap:10px;margin-bottom:14px;">
+            <div class="small-audio">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div><strong>Ocean waves</strong><div class="text-muted" style="font-size:.85rem">Gentle ocean</div></div>
+                <button class="btn" data-audio="ocean">Play</button>
+              </div>
+              <audio id="audio-ocean" loop preload="none">
+                <!-- replace with a permissively licensed loop -->
+                <source src="sounds/ocean.mp3" type="audio/mpeg">
+                Your browser does not support the audio element.
+              </audio>
+            </div>
+
+            <div class="small-audio">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div><strong>Rain & thunder</strong><div class="text-muted" style="font-size:.85rem">Soft rain</div></div>
+                <button class="btn" data-audio="rain">Play</button>
+              </div>
+              <audio id="audio-rain" loop preload="none">
+                <source src="sounds/rain.mp3" type="audio/mpeg">
+              </audio>
+            </div>
+
+            <div class="small-audio">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div><strong>Wind / Forest</strong><div class="text-muted" style="font-size:.85rem">Breezy ambience</div></div>
+                <button class="btn" data-audio="wind">Play</button>
+              </div>
+              <audio id="audio-wind" loop preload="none">
+                <source src="sounds/wind.mp3" type="audio/mpeg">
+              </audio>
+            </div>
+          </div>
+
+          <hr style="border:none;border-top:1px solid var(--glass-border);margin:12px 0;" />
+
+          <h3 style="margin:8px 0">Daily motivation</h3>
+          <div class="empty-state" id="motivation">
+            <div id="motivation-text">Loading inspiration...</div>
+            <div style="margin-top:8px;">
+              <button class="btn" id="new-quote">New</button>
+              <button class="btn" id="share-quote">Share</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; 2025 WELLTH — <a href="mailto:hello@wellth.example">hello@wellth.example</a></p>
+    </div>
+  </footer>
+
+<script>
+/* Mood tracker: localStorage-backed, emoji entry, weekly aggregation, simple prediction */
+(() => {
+  const STORAGE_KEY = 'wellth_moods_v1';
+  const form = document.getElementById('mood-form');
+  const dateInput = document.getElementById('mood-date');
+  const noteInput = document.getElementById('mood-note');
+  const saveBtn = document.getElementById('save-mood');
+  const clearBtn = document.getElementById('clear-moods');
+  const entriesEl = document.getElementById('mood-entries');
+  const emojiButtons = Array.from(document.querySelectorAll('.mood-emoji'));
+  let selectedMood = null;
+
+  // Charts
+  const weeklyCtx = document.getElementById('weeklyMoodChart').getContext('2d');
+  const futureCtx = document.getElementById('futureMoodChart').getContext('2d');
+
+  const weeklyChart = new Chart(weeklyCtx, {
+    type: 'bar',
+    data: { labels: [], datasets: [{ label: 'Avg mood', data: [], backgroundColor: 'rgba(108,140,255,0.9)', borderRadius:6 }] },
+    options: { plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, max:4, ticks:{stepSize:1,color:'var(--muted)'}}, x:{ticks:{color:'var(--muted)'}} }, maintainAspectRatio:false }
+  });
+
+  const futureChart = new Chart(futureCtx, {
+    type: 'line',
+    data: { labels: [], datasets: [{ data: [], borderColor:'rgba(50,209,191,0.95)', backgroundColor:'rgba(50,209,191,0.12)', tension:0.28, fill:true, pointRadius:3 }] },
+    options: { plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, max:4, ticks:{stepSize:1,color:'var(--muted)'}}, x:{ticks:{color:'var(--muted)'}} }, maintainAspectRatio:false }
+  });
+
+  function todayISO(d = new Date()) { const z = new Date(d); z.setHours(0,0,0,0); return z.toISOString().slice(0,10); }
+
+  function load() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; } }
+  function save(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+
+  // set default date
+  if (dateInput) dateInput.value = todayISO();
+
+  // emoji selection
+  emojiButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedMood = Number(btn.dataset.value);
+      emojiButtons.forEach(b => b.setAttribute('aria-pressed','false'));
+      btn.setAttribute('aria-pressed','true');
+      saveBtn.disabled = false;
+    });
+  });
+
+  // add mood
+  form.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    if (selectedMood === null) return;
+    const list = load();
+    const entry = {
+      id: Date.now(),
+      date: dateInput.value || todayISO(),
+      mood: selectedMood,
+      note: (noteInput.value || '').trim()
+    };
+    list.push(entry);
+    save(list);
+    noteInput.value = '';
+    selectedMood = null;
+    emojiButtons.forEach(b => b.setAttribute('aria-pressed','false'));
+    saveBtn.disabled = true;
+    render();
+  });
+
+  // clear all
+  clearBtn.addEventListener('click', () => {
+    if (!confirm('Clear all mood entries?')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    render();
+  });
+
+  // render list
+  function renderEntries() {
+    const list = load().slice().sort((a,b) => b.id - a.id);
+    entriesEl.innerHTML = '';
+    if (list.length === 0) {
+      entriesEl.innerHTML = '<li class="empty-state">No moods recorded yet — try adding one above.</li>';
+      return;
+    }
+    list.slice(0,200).forEach(it => {
+      const li = document.createElement('li');
+      li.style.display = 'flex';
+      li.style.justifyContent = 'space-between';
+      li.style.alignItems = 'center';
+      li.style.gap = '12px';
+      li.innerHTML = `
+        <div class="meta">
+          <div class="title">${['😔','☹️','😐','🙂','😄'][it.mood]} ${it.note ? escapeHtml(it.note) : ''}</div>
+          <div class="date">${it.date}</div>
+        </div>
+        <div class="amount">
+          <div class="value">mood ${it.mood}</div>
+          <div><button class="btn remove" data-id="${it.id}">Remove</button></div>
+        </div>`;
+      entriesEl.appendChild(li);
+      li.querySelector('.remove').addEventListener('click', () => {
+        const filtered = load().filter(x => x.id !== it.id);
+        save(filtered); render();
+      });
+    });
+  }
+
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // chart data helpers
+  function lastNDates(n) {
+    const out = [];
+    const now = new Date();
+    for (let i = n-1; i >= 0; i--) {
+      const d = new Date(now); d.setDate(now.getDate() - i);
+      out.push(todayISO(d));
+    }
+    return out;
+  }
+
+  function updateCharts() {
+    const list = load();
+    const days = lastNDates(7);
+    const averages = days.map(d => {
+      const items = list.filter(x => x.date === d).map(x => x.mood);
+      if (items.length === 0) return 0;
+      return Math.round((items.reduce((a,b)=>a+b,0) / items.length) * 100) / 100;
+    });
+
+    weeklyChart.data.labels = days.map(d => d.slice(5));
+    weeklyChart.data.datasets[0].data = averages;
+    weeklyChart.update();
+
+    // simple linear trend projection for next 7 days based on averages
+    const valid = averages.filter(v=>v>0);
+    const avg = valid.length ? valid.reduce((a,b)=>a+b,0)/valid.length : 2;
+    const trend = (averages[averages.length-1] - averages[0]) / Math.max(averages.length-1,1);
+    const futureLabels = [];
+    const futureVals = [];
+    const base = new Date();
+    for (let i = 1; i <= 7; i++) {
+      const d = new Date(base); d.setDate(base.getDate() + i);
+      futureLabels.push(todayISO(d).slice(5));
+      const pred = Math.min(4, Math.max(0, avg + trend * i * 0.6));
+      futureVals.push(parseFloat(pred.toFixed(2)));
+    }
+    futureChart.data.labels = futureLabels;
+    futureChart.data.datasets[0].data = futureVals;
+    futureChart.update();
+  }
+
+  // calming audio controls
+  document.querySelectorAll('[data-audio]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.audio;
+      const audio = document.getElementById('audio-' + key);
+      if (!audio) return;
+      // pause others
+      document.querySelectorAll('audio').forEach(a => { if (a !== audio) { a.pause(); a.currentTime = 0; }});
+      if (audio.paused) { audio.play(); btn.textContent = 'Pause'; } else { audio.pause(); btn.textContent = 'Play'; }
+    });
+  });
+
+  // motivation quotes (small curated list)
+  const quotes = [
+    "One small positive thought in the morning can change your whole day.",
+    "You are stronger than you think — take one deep breath.",
+    "Progress, not perfection. Try again tomorrow.",
+    "Quiet your mind and listen to the small voice within.",
+    "Kindness toward yourself is the foundation of wellness."
+  ];
+  const motEl = document.getElementById('motivation-text');
+  function newQuote() { motEl.textContent = quotes[Math.floor(Math.random()*quotes.length)]; }
+  document.getElementById('new-quote').addEventListener('click', newQuote);
+  document.getElementById('share-quote').addEventListener('click', () => {
+    if (navigator.share) navigator.share({text: motEl.textContent}).catch(()=>{});
+    else alert(motEl.textContent);
+  });
+
+  // initial render
+  function render() {
+    renderEntries();
+    updateCharts();
+  }
+
+  render();
+  newQuote();
+})();
+</script>
+</body>
+</html>

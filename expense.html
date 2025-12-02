@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>WELLTH — Expenses & Mood</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a class="logo" href="index.html">WELLTH</a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="expense.html">Expenses</a>
+        <a href="mood.html">Mood Tracker</a>
+        <a href="index.html">Home</a>
+      </nav>
+      <div class="profile_section"><i class="fas fa-user-circle"></i></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="container hero" style="padding:28px 0; min-height:auto;">
+      <div style="display:grid; gap:18px; grid-template-columns: repeat(auto-fit,minmax(320px,1fr)); width:100%;">
+        <!-- Entry card -->
+        <div class="card" aria-live="polite">
+          <h2>Log Daily Expense</h2>
+          <form id="expense-form" autocomplete="off">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <label style="flex:1 1 140px;">
+                <div class="text-muted" style="font-size:.85rem;margin-bottom:6px;">Date</div>
+                <input id="date" type="date" required style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:transparent;color:var(--text)" />
+              </label>
+              <label style="flex:1 1 120px;">
+                <div class="text-muted" style="font-size:.85rem;margin-bottom:6px;">Amount</div>
+                <input id="amount" type="number" step="0.01" min="0" required placeholder="0.00" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:transparent;color:var(--text)" />
+              </label>
+            </div>
+
+            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+              <label style="flex:1 1 160px;">
+                <div class="text-muted" style="font-size:.85rem;margin-bottom:6px;">Category</div>
+                <select id="category" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:transparent;color:var(--text)">
+                  <option value="general">General</option>
+                  <option value="food">Food</option>
+                  <option value="transport">Transport</option>
+                  <option value="bills">Bills</option>
+                  <option value="other">Other</option>
+                </select>
+              </label>
+
+              <label style="flex:1 1 240px;">
+                <div class="text-muted" style="font-size:.85rem;margin-bottom:6px;">Note</div>
+                <input id="note" type="text" placeholder="Optional note" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:transparent;color:var(--text)" />
+              </label>
+            </div>
+
+            <p style="margin-top:12px;">
+              <button class="btn primary" type="submit">Add Expense</button>
+              <button id="clear-all" type="button" class="btn" style="margin-left:8px;">Clear All</button>
+            </p>
+          </form>
+
+          <hr style="border:none;border-top:1px solid var(--glass-border);margin:12px 0;" />
+          <h3 style="margin-top:0;margin-bottom:8px;">Recent entries</h3>
+          <ul id="entries" style="list-style:none;padding:0;margin:0;max-height:260px;overflow:auto;"></ul>
+        </div>
+
+        <!-- Charts card -->
+        <div class="card">
+          <h2>Daily & Weekly Insights</h2>
+          <p class="text-muted" style="margin-bottom:10px;">Daily totals (last 7 days) and a 7-day prediction based on recent trend.</p>
+
+          <div style="margin-bottom:18px;">
+            <canvas id="dailyChart" height="160"></canvas>
+          </div>
+
+          <div>
+            <canvas id="weeklyChart" height="160"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; 2025 WELLTH — <a href="mailto:wellthcare@gmail.com">wellthcare@gmil.com</a></p>
+    </div>
+  </footer>
+
+<script>
+/* Simple local-storage backed expense tracker + Chart.js visualizations */
+const STORAGE_KEY = 'wellth_expenses_v1';
+const form = document.getElementById('expense-form');
+const entriesEl = document.getElementById('entries');
+const clearBtn = document.getElementById('clear-all');
+
+function loadExpenses(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  return raw ? JSON.parse(raw) : [];
+}
+function saveExpenses(list){ localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
+
+function isoDate(d){
+  const z = new Date(d); z.setHours(0,0,0,0); return z.toISOString().slice(0,10);
+}
+
+function addExpense(e){
+  e.preventDefault();
+  const date = document.getElementById('date').value || isoDate(new Date());
+  const amount = parseFloat(document.getElementById('amount').value) || 0;
+  const category = document.getElementById('category').value;
+  const note = document.getElementById('note').value || '';
+  if (amount <= 0) return;
+  const list = loadExpenses();
+  list.push({ id: Date.now(), date: isoDate(date), amount, category, note });
+  saveExpenses(list);
+  form.reset();
+  render();
+}
+form.addEventListener('submit', addExpense);
+clearBtn.addEventListener('click', ()=>{ if(confirm('Clear all expenses?')){ localStorage.removeItem(STORAGE_KEY); render(); } });
+
+function render(){
+  const list = loadExpenses().sort((a,b)=>b.date.localeCompare(a.date) || b.id - a.id);
+  entriesEl.innerHTML = '';
+  list.slice(0,100).forEach(item=>{
+    const li = document.createElement('li');
+    li.style.padding = '10px';
+    li.style.borderBottom = '1px dashed rgba(255,255,255,0.02)';
+    li.innerHTML = `<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
+      <div style="min-width:0">
+        <div style="font-weight:600;color:var(--text);font-size:.95rem;">${item.category} · ${item.note ? escapeHtml(item.note) : ''}</div>
+        <div class="text-muted" style="font-size:.85rem;">${item.date}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-weight:700;color:var(--accent);">${item.amount.toFixed(2)}</div>
+        <button class="btn" style="margin-top:6px;" data-id="${item.id}">Remove</button>
+      </div>
+    </div>`;
+    entriesEl.appendChild(li);
+    li.querySelector('button').addEventListener('click', () => {
+      const filtered = loadExpenses().filter(x=>x.id!==item.id);
+      saveExpenses(filtered); render();
+    });
+  });
+  updateCharts();
+}
+
+function escapeHtml(s){ return s.replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+/* Chart setup */
+const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+const weeklyCtx = document.getElementById('weeklyChart').getContext('2d');
+
+const dailyChart = new Chart(dailyCtx, {
+  type: 'bar',
+  data: { labels: [], datasets: [{ label: 'Daily total', data: [], backgroundColor: 'rgba(108,140,255,0.9)', borderRadius:6 }] },
+  options: {
+    plugins:{ legend:{display:false} },
+    scales:{ x:{ grid:{display:false} }, y:{ ticks:{ color:'var(--muted)' }, beginAtZero:true } },
+    maintainAspectRatio:false
+  }
+});
+
+const weeklyChart = new Chart(weeklyCtx, {
+  type: 'line',
+  data: { labels: [], datasets: [{ label: 'Predicted', data: [], borderColor: 'rgba(50,209,191,0.95)', backgroundColor: 'rgba(50,209,191,0.12)', tension:0.28, fill:true, pointRadius:3 }] },
+  options:{
+    plugins:{ legend:{display:false} },
+    scales:{ x:{ grid:{display:false} }, y:{ ticks:{ color:'var(--muted)' }, beginAtZero:true } },
+    maintainAspectRatio:false
+  }
+});
+
+/* Aggregate and update */
+function getLastNDates(n){
+  const arr = [];
+  const today = new Date();
+  for(let i=n-1;i>=0;i--){
+    const d = new Date(today); d.setDate(today.getDate()-i); arr.push(isoDate(d));
+  }
+  return arr;
+}
+
+function updateCharts(){
+  const list = loadExpenses();
+  // daily totals for last 7 days
+  const days = getLastNDates(7);
+  const totals = days.map(d => list.filter(x=>x.date===d).reduce((s,i)=>s+i.amount,0));
+  dailyChart.data.labels = days.map(d=>d.slice(5)); // show MM-DD
+  dailyChart.data.datasets[0].data = totals;
+  dailyChart.update();
+
+  // simple prediction: next 7 days = average of last 7 days, optionally add a small trend
+  const avg = totals.reduce((a,b)=>a+b,0) / (totals.length || 1);
+  // compute small linear trend (difference between last and first of window) / 6
+  const trend = (totals[totals.length-1] - totals[0]) / Math.max(totals.length-1,1);
+  const futureDates = [];
+  const futureVals = [];
+  const base = new Date();
+  for (let i=1;i<=7;i++){
+    const d = new Date(); d.setDate(base.getDate()+i);
+    futureDates.push(isoDate(d).slice(5));
+    // predicted = avg plus incremental trend * i * 0.6 (dampen)
+    const pred = Math.max(0, avg + trend * i * 0.6);
+    futureVals.push(parseFloat(pred.toFixed(2)));
+  }
+  weeklyChart.data.labels = futureDates;
+  weeklyChart.data.datasets[0].data = futureVals;
+  weeklyChart.update();
+}
+
+/* initialise */
+(function init(){
+  // set default date to today
+  const dateInput = document.getElementById('date');
+  if(dateInput) dateInput.value = isoDate(new Date());
+  render();
+})();
+</script>
+
+</body>
+</html>
